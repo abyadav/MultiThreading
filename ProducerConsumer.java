@@ -39,36 +39,29 @@ class SharedResource {
 
         while (dq.size() == capacity || curr == 101) {
             try {
-                notifyAll();
-                System.out.println("Waiting...");
+                System.out.println("Queue size maximum");
                 wait();
             } catch (Exception e) {
             }
         }
-        if (curr > 100) {
-            notifyAll();
 
-            return;
-        }
-
-        dq.addLast(curr++);
-        notifyAll();
+        dq.addLast(curr + 1);
+        curr++;
+        notify();
         System.out.println("Produced " + curr);
-        System.out.println(dq.size());
     }
 
     public synchronized void consume() {
         while (dq.size() == 0) {
-            notify();
             try {
+                System.out.println("Queue empty, waiting...");
                 wait();
             } catch (Exception e) {
             }
         }
-        if (dq.size() != 0) {
-            int curr = dq.removeFirst();
-            notify();
-            System.out.println("Consumed " + curr);
-        }
+        int curr = dq.removeFirst();
+        notify();
+        System.out.println("Consumed " + curr);
+
     }
 }
