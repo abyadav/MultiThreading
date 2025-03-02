@@ -1,5 +1,6 @@
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.Semaphore;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
@@ -17,7 +18,7 @@ public class MultiBuffer {
                 for (int j = 0; j < 10; j++) {
                     bq.produce(buffer);
                     try {
-                        Thread.sleep(10);
+                        // Thread.sleep(10);
                     } catch (Exception e) {
 
                     }
@@ -51,6 +52,7 @@ class BufferQueue {
 
     private static List<Integer>[] buffers;
     Lock[] locks = new Lock[bufferCount];
+    Semaphore[] bufferNotFull = new Semaphore[bufferCount];
     Condition[] conditions = new Condition[bufferCount];
 
     @SuppressWarnings("unchecked")
@@ -60,25 +62,18 @@ class BufferQueue {
             buffers[i] = new ArrayList<>();
             locks[i] = new ReentrantLock();
             conditions[i] = locks[i].newCondition();
+            bufferNotFull[i] = new Semaphore(bufferSize);
         }
     }
 
     public void produce(int buffer) {
-        locks[buffer].lock();
         try {
-
-            while (buffers[buffer].size() == bufferSize) {
-
-                try {
-                    conditions[buffer].await();
-                } catch (Exception e) {
-                }
-            }
+            bufferNotFull[buffer].acquire();
+            locks[buffer].lock();
 
             int produced = (int) (Math.random() * 1000);
             System.out.println("Thread " + Thread.currentThread().getName() + " produced " + produced);
             buffers[buffer].add(produced);
-            conditions[buffer].notify();
         } catch (Exception e) {
         } finally {
             locks[buffer].unlock();
@@ -96,15 +91,11 @@ class BufferQueue {
                     if (buffers[i].size() == 0) {
                         continue;
                     }
-                    // while (buffers[i].size() > 0) {
                     int consumed = buffers[i].remove(buffers[i].size() - 1);
                     System.out.println(
                             "Thread " + Thread.currentThread().getName() + " consumed " + consumed + " from " + i);
-                    // }
-                    conditions[i].notify();
-                    // Thread.currentThread().yield();
+                    bufferNotFull[i].release();
                 } catch (Exception e) {
-                    // TODO: handle exception
                 } finally {
                     locks[i].unlock();
                 }
