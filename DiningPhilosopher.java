@@ -38,8 +38,13 @@ class Table {
     }
 
     public void letPhilosopherEat(int philosopher) {
-        forks[philosopher].lock();
-        forks[(philosopher + 1) % philosophersCount].lock();
+        if (philosopher != philosophersCount - 1) {
+            forks[philosopher].lock();
+            forks[(philosopher + 1) % philosophersCount].lock();
+        } else {
+            forks[(philosopher + 1) % philosophersCount].lock();
+            forks[philosopher].lock();
+        }
         try {
             System.out.println(philosopher + " has started eating");
             // Thread.sleep((int) (100 * Math.random()));
